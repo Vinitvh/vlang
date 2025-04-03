@@ -87,10 +87,57 @@ class Scanner {
             case '\n':
                 line++;
                 break;
+            case '"':
+                string();
+                break;
             default:
-                Vlang.error(line, "Unexpected character.");
+                if (isDigit(c)) {
+                    number();
+                } else {
+                    Vlang.error(line, "Unexpected character.");
+                }
                 break;
         }
+    }
+
+    private void number() {
+        while (isDigit(peek()))
+            advance();
+
+        // Look for fractional part
+        if (peek() == '.' && isDigit(peekNext())) {
+            advance();
+
+            while (isDigit(peek()))
+                advance();
+        }
+
+        addToken(NUMBER, Double.parseDouble(source.substring(start, current)));
+    }
+
+    private char peekNext() {
+        if (current + 1 >= source.length())
+            return '\0';
+        return source.charAt(current + 1);
+    }
+
+    private void string() {
+        while (peek() != '"' && !isAtEnd()) {
+            if (peek() == '\n') {
+                line++;
+            }
+            advance();
+        }
+        if (isAtEnd()) {
+            Vlang.error(line, "Unterminated string");
+            return;
+        }
+        // The closing "
+        advance();
+
+        // Trim the surrounding quotes
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
     }
 
     private boolean match(char expected) {
@@ -111,6 +158,10 @@ class Scanner {
 
     private boolean isAtEnd() {
         return current >= source.length();
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
     }
 
     private char advance() {
